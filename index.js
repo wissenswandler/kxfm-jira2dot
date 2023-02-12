@@ -176,7 +176,7 @@ static jiraIssueArray2dotString( issueArray, jiraInstance )
  */
 static jiraGraph2dotString( jiraGraph, jiraInstance )
 {
-    let tempString = `digraph Map {
+    let dotString = `digraph Map {
 graph [
     class="dot_by_kts"
 ]
@@ -197,7 +197,6 @@ node [
  *
  */
 
-
     /*
      * render nodes first (otherwise references to nodes that are not yet defined will result in naked nodes)
      */
@@ -210,7 +209,7 @@ node [
             //
             // node definition
             //
-            tempString += "\n\n" 
+            dotString += "\n\n" 
                 + "# self: " + issue.self + "\n"
                 + "<" + issue.key + ">"
                 + " [ "
@@ -225,12 +224,12 @@ node [
             //
             if( issue.fields.parent )
             {
-                tempString += "\n<" + issue.key + "> -> <" + issue.fields.parent.key + ">";
+                dotString += "\n<" + issue.key + "> -> <" + issue.fields.parent.key + ">";
             }
         }
     );
 
-    tempString += "\n";
+    dotString += "\n";
 
     // create array from edges map
     let edges = Array.from( jiraGraph.edges.values() )
@@ -269,11 +268,10 @@ node [
             /*
              * render link type definition
              */
-            tempString += '\n{'
-            + ' edge ['
-            + (style ? style : KTS4Dot.renderAttributeIfExists( "label" , inwardLabel ) )
-            + ']'
-            + ' # link type: "' + predicateName + '"'
+            let styleOrLabel = style ? style : KTS4Dot.renderAttributeIfExists( "label" , inwardLabel ) ;
+            let hasLabel = styleOrLabel.indexOf( "label=" ) >= 0;
+            dotString += '\n{'
+            + ' edge [' + styleOrLabel + ']' + ' # link type: "' + predicateName + '"'
 
             /*
             * render edges
@@ -285,10 +283,10 @@ node [
                     let o = jiraGraph.nodes.get( link.o_id );
 
                     let tooltip = `${s.fields.summary} –${inwardLabel}→ ${o.fields.summary} –${outwardLabel}→ ${s.fields.summary}` ;
-                    tempString += `\n<${s.key}> -> <${o.key}>`
+                    dotString += `\n<${s.key}> -> <${o.key}>`
                     + "["
-                    + 'labeltooltip="' + KTS4Dot.safeAttribute( tooltip ) + '"'
-                    +     ' tooltip="' + KTS4Dot.safeAttribute( tooltip ) + '"'
+                    + ( hasLabel ? 'labeltooltip="' + KTS4Dot.safeAttribute( tooltip ) + '"' : '' )
+                    +                  ' tooltip="' + KTS4Dot.safeAttribute( tooltip ) + '"'
                     + "]";
                 }
             );
@@ -296,12 +294,11 @@ node [
             /*
              * end of link type definition
              */
-            tempString += "\n}";
+            dotString += "\n}";
         }
     );
 
-
-    return tempString + "\n}";
+    return dotString + "\n}";
 }
 
 static renderHtmlLabel( issue, jiraInstance )
