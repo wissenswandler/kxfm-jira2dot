@@ -10,5 +10,9 @@
     "build" : "npm link @kxfm/dot @kxfm/svg"
   },
   "author": "Boran Gögetap",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com:wissenswandler/kxfm-jira2dot.git"
+  },
   "license": "AGPL-3.0-or-later"
 }
