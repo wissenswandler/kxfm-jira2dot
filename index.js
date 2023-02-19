@@ -8,12 +8,15 @@ import KTS4Dot from "@kxfm/dot";
 const ARROW_UP = '▲';
 const ARROW_DN = '▼';
 
+const cloudInstanceMatcheR = /https:\/\/[a-zA-Z-]+\.atlassian\.net\//g;
+
 /*
  * a Set of unqiue objects
  * where identity is defined by the unique_by property
  */
 class UniqueSet extends Map
 {
+    
   static get unqiue_by() { return "id"; }
 
   add (o) 
@@ -96,7 +99,6 @@ class JiraIssueSet extends UniqueSet
 
 class JiraIssueLinkSet extends UniqueSet
 {
-
 }
 
 export class Tjira2dot
@@ -121,6 +123,7 @@ static safeAdd( set, o )
 */
 static jiraIssueArray2dotString( issueArray, jiraInstance )
 {
+
     const issueSet = new JiraIssueSet( issueArray.map( (i) => [ i.id, i ] ) );
     const linkSet  = new JiraIssueLinkSet();   
 
@@ -141,6 +144,7 @@ static jiraIssueArray2dotString( issueArray, jiraInstance )
                     // note that traditional Jira semantics are in "dependency" direction,
                     // which is the opposite of "value" direction,
                     // so it appears that we reverse the direction of the edge by drawing it from the outwardIssue to the inwardIssue
+                    // however this is the intended semantics of KTS
                     {
                         if( link.outwardIssue )
                         {
@@ -256,10 +260,12 @@ node [
             let group = groupedEdges[ linkTypeId ];
 
             let p = group[0].type;
+
+            let reverse_impact = ["10000", "10006"].includes( p.id );   // built-in "Blocks" and "Problem/Incident" link types
+            let impact_inverter = reverse_impact ? 1 : 0;
             
             let  inwardLabel =  p.inward.replace( ARROW_UP , '' ).trim();
             let outwardLabel = p.outward.replace( ARROW_DN , '' ).trim();
-
 
             let predicateNameParts = p.name.split( " -- style: " );
             let predicateName = predicateNameParts[0];
@@ -268,7 +274,7 @@ node [
             /*
              * render link type definition
              */
-            let styleOrLabel = style ? style : KTS4Dot.renderAttributeIfExists( "label" , inwardLabel ) ;
+            let styleOrLabel = style ? style : KTS4Dot.renderAttributeIfExists( "label" , reverse_impact ? outwardLabel : inwardLabel ) ;
             let hasLabel = styleOrLabel.indexOf( "label=" ) >= 0;
             dotString += '\n{'
             + ' edge [' + styleOrLabel + ']' + ' # link type: "' + predicateName + '"'
@@ -283,7 +289,10 @@ node [
                     let o = jiraGraph.nodes.get( link.o_id );
 
                     let tooltip = `${s.fields.summary} –${inwardLabel}→ ${o.fields.summary} –${outwardLabel}→ ${s.fields.summary}` ;
-                    dotString += `\n<${s.key}> -> <${o.key}>`
+
+                    let nodes = [ s, o ];
+
+                    dotString += `\n<${nodes[0+impact_inverter].key}> -> <${nodes[1-impact_inverter].key}>`
                     + "["
                     + ( hasLabel ? 'labeltooltip="' + KTS4Dot.safeAttribute( tooltip ) + '"' : '' )
                     +                  ' tooltip="' + KTS4Dot.safeAttribute( tooltip ) + '"'
@@ -331,7 +340,6 @@ static jiraInstanceFromIssueOrParameter( issue, jiraInstance )
 }
 static jiraInstanceFromIssue( issue )
 {
-    const cloudInstanceMatcheR = /https:\/\/(\w+\.atlassian\.net)\//g;
     const cloudInstanceMatcheS = [ ...issue.self.matchAll( cloudInstanceMatcheR ) ];
 
     if( cloudInstanceMatcheS && cloudInstanceMatcheS[0] )
@@ -346,7 +354,6 @@ static renderURL( issue, jiraInstance )
 {
     let browsePath;
 
-    const cloudInstanceMatcheR = /https:\/\/\w+\.atlassian\.net\//g;
     const cloudInstanceMatcheS = [ ...issue.self.matchAll( cloudInstanceMatcheR ) ];
 
     if( cloudInstanceMatcheS && cloudInstanceMatcheS[0] )
